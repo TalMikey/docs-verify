@@ -4,7 +4,8 @@
   "description": "verify docs code changes and make it up to date",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "author": "Tal Mikey",
   "license": "ISC",
@@ -13,5 +14,8 @@
     "@babel/core": "^7.15.5",
     "@babel/node": "^7.15.4",
     "@babel/preset-env": "^7.15.6"
+  },
+  "dependencies": {
+    "nodegit": "^0.27.0"
   }
 }
