@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "nodegit": "^0.27.0"
+    "nodegit": "^0.27.0",
+    "shelljs": "^0.8.4"
   }
 }

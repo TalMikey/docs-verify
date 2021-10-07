@@ -1,7 +1,26 @@
 var NodeGit = require('nodegit');
+var readline = require('readline');
+var shell = require('shelljs');
 var _ = require('lodash');
 
 const LINKS_REGEX = /\s?[Ll]inks\s?:\s?\n((- [a-zA-Z0-9\\\/\.]+\n?)+)/g;
+const SUCESS_CODE = 0;
+const FAIL_CODE = 1; 
+
+let resolveInput = _.noop;
+const inputPromise = new Promise(resolve => {
+    resolveInput = resolve;
+});
+
+const reader = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+const exit = code => {
+    reader.close();
+    shell.exit(code);
+};
 
 const openRepo = async path => await NodeGit.Repository.open(path);
 
@@ -49,7 +68,7 @@ const getTouchedAsString = touched => {
         const description = `${path}: \n`.concat(links.map(link => `\t- ${link} \n`))
 
         return acc.concat(description);
-    }, "")
+    }, "");
 };
 
 const getTouchedFilesByDoc = async (repoPath, docsRepoPath) => {
@@ -57,24 +76,41 @@ const getTouchedFilesByDoc = async (repoPath, docsRepoPath) => {
         const stagedFilesPaths = await getStagedFilesPaths(repoPath);
         const linkedPathsByDoc = await getLinkedPathsByDocPath(docsRepoPath);
 
-        const touched = linkedPathsByDoc.reduce((acc, value) => {
+        const touched = stagedFilesPaths && linkedPathsByDoc.reduce((acc, value) => {
             const {path, links} = value; 
 
             const touchedFilesPaths = links.filter(linkPath => stagedFilesPaths.includes(linkPath));
-            acc[path] = touchedFilesPaths;
+            
+            if (touchedFilesPaths.length) {
+                acc[path] = touchedFilesPaths;
+            }
 
             return acc;
         }, {});
 
         if (!_.isEmpty(touched)) {
-            console.log(
+            const message = 
                 "Pay attention! Some docs files linked to code has changed!\n" +
                 "Above are the docs that contains modifed files:\n" +
-                getTouchedAsString(touched)
-            );
+                getTouchedAsString(touched) +
+                "Do you want to continue? (y/n)";
+
+            reader.question(message, answer => {
+                if (answer === 'n') {
+                    exit(FAIL_CODE); // abort
+                }
+
+                resolveInput();
+            });
+        } else {
+            resolveInput();
         }
+
+        await inputPromise;
+        exit(SUCESS_CODE);
     } catch(e) {
         console.log(e);
+        exit(FAIL_CODE);
     }
 };
 
