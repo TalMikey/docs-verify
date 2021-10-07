@@ -1,4 +1,5 @@
 var NodeGit = require('nodegit');
+var _ = require('lodash');
 
 const LINKS_REGEX = /\s?[Ll]inks\s?:\s?\n((- [a-zA-Z0-9\\\/\.]+\n?)+)/g;
 
@@ -23,6 +24,7 @@ const getLinksFromFile = content => {
         .map(x => x.substring(2))
     );
 
+    // TODO : change to _.flatten
     return [].concat(...linksSections);
 };
 
@@ -32,12 +34,22 @@ const getLinkedPathsByDocPath = async docsRepoPath => {
     const head = await repo.getHeadCommit();
     const headTree = await head.getTree();
 
+    // TODO: add change type and if the files name changed
     const linksByPath = await Promise.all(headTree.entries().filter(x => x.isBlob()).map(async x => ({
         path: x.path(),
         links: getLinksFromFile((await x.getBlob()).content().toString())
     })));
 
     return linksByPath.filter(x => x.links.length);
+};
+
+const getTouchedAsString = touched => {
+    return Object.entries(touched).reduce((acc, value) => {
+        const [path, links] = value;
+        const description = `${path}: \n`.concat(links.map(link => `\t- ${link} \n`))
+
+        return acc.concat(description);
+    }, "")
 };
 
 const getTouchedFilesByDoc = async (repoPath, docsRepoPath) => {
@@ -53,9 +65,20 @@ const getTouchedFilesByDoc = async (repoPath, docsRepoPath) => {
 
             return acc;
         }, {});
+
+        if (!_.isEmpty(touched)) {
+            console.log(
+                "Pay attention! Some docs files linked to code has changed!\n" +
+                "Above are the docs that contains modifed files:\n" +
+                getTouchedAsString(touched)
+            );
+        }
     } catch(e) {
         console.log(e);
     }
 };
 
-getTouchedFilesByDoc("C:\\Users\\talmi\\Desktop\\projects\\docs-verify", "C:\\Users\\talmi\\Desktop\\projects\\makmarschool.wiki");
+getTouchedFilesByDoc(
+    "C:\\Users\\talmi\\Desktop\\projects\\docs-verify", 
+    "C:\\Users\\talmi\\Desktop\\projects\\makmarschool.wiki"
+);
