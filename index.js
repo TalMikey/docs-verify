@@ -1,6 +1,5 @@
 var NodeGit = require('nodegit');
 var readline = require('readline');
-var shell = require('shelljs');
 var _ = require('lodash');
 
 const LINKS_REGEX = /\s?[Ll]inks\s?:\s?\n((- [a-zA-Z0-9\\\/\.]+\n?)+)/g;
@@ -19,7 +18,7 @@ const reader = readline.createInterface({
 
 const exit = code => {
     reader.close();
-    shell.exit(code);
+    process.exit(code);
 };
 
 const openRepo = async path => await NodeGit.Repository.open(path);
@@ -71,6 +70,22 @@ const getTouchedAsString = touched => {
     }, "");
 };
 
+const getUserApproval = () => {
+    reader.question("Do you want to continue? (y/n)", answer => {
+        if (answer === 'y') {
+            resolveInput();
+
+            return;
+        }
+
+        if (answer === 'n') {
+            exit(FAIL_CODE); // abort
+        }
+
+        getUserApproval();
+    });
+};
+
 const getTouchedFilesByDoc = async (repoPath, docsRepoPath) => {
     try {
         const stagedFilesPaths = await getStagedFilesPaths(repoPath);
@@ -89,24 +104,17 @@ const getTouchedFilesByDoc = async (repoPath, docsRepoPath) => {
         }, {});
 
         if (!_.isEmpty(touched)) {
-            const message = 
+            console.log(
                 "Pay attention! Some docs files linked to code has changed!\n" +
                 "Above are the docs that contains modifed files:\n" +
-                getTouchedAsString(touched) +
-                "Do you want to continue? (y/n)";
+                getTouchedAsString(touched)
+            );
 
-            reader.question(message, answer => {
-                if (answer === 'n') {
-                    exit(FAIL_CODE); // abort
-                }
+            getUserApproval();
 
-                resolveInput();
-            });
-        } else {
-            resolveInput();
+            await inputPromise;
         }
 
-        await inputPromise;
         exit(SUCESS_CODE);
     } catch(e) {
         console.log(e);
