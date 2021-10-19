@@ -16,20 +16,7 @@ const reader = readline.createInterface({
     output: process.stdout
 });
 
-const readlineWrapper = (question, answerFunc) => new Promise(resolve => { 
-    reader.resume();
-    reader.question(question, answer => {
-        reader.pause();
-        reader.stdoutMuted = false;
-        answerFunc(answer, resolve);
-    });
-});
-
 const getWithPassword = input => {
-    if (input === '\r\n') {
-        return input;
-    }
-
     if (!input.includes(reader._prompt)) {
         return '*'.repeat(input.length);
     }
@@ -39,8 +26,17 @@ const getWithPassword = input => {
 };
 
 reader._writeToOutput = input => {
-    reader.output.write(reader.stdoutMuted ? getWithPassword(input) : input);
+    reader.output.write(reader.stdoutMuted && input !== '\r\n' ? getWithPassword(input) : input);
 }
+
+const readlineWrapper = (question, answerFunc) => new Promise(resolve => { 
+    reader.resume();
+    reader.question(question, answer => {
+        reader.pause();
+        reader.stdoutMuted = false;
+        answerFunc(answer, resolve);
+    });
+});
 
 const exit = code => {
     reader.close();
