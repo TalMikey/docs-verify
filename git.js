@@ -2,16 +2,11 @@ var NodeGit = require('nodegit');
 var _ = require('lodash');
 var path = require('path');
 var axios = require('axios');
-var fs = require('fs/promises');
+var { readFile, writeFile, appendFile } = require('fs/promises');
 var { exitFail } = require('./process-control');
 
 const LINKS_REGEX = /\s?[Ll]inks\s?:\s?\n((- [a-zA-Z0-9\\\/\.]+\n?)+)/g;
 const CONFIG_FILE = 'docs.config.json';
-
-const getDocsPath = docsUrl => path.join(
-    __dirname, 
-    _.last(docsUrl.split('/')).replace('.git', '')
-);
 
 const getConfigGetter = async repo => {
     const config = await repo.config();
@@ -39,7 +34,7 @@ const isPrivateRepo = async path => {
 
 const getGitToken = async docsPath => {
     try {
-        const configFile = await fs.readFile(path.join(docsPath, CONFIG_FILE));
+        const configFile = await readFile(path.join(docsPath, CONFIG_FILE));
         const config = JSON.parse(configFile);
 
         return config.gitToken;
@@ -56,8 +51,8 @@ const getGitToken = async docsPath => {
 }
 
 const addConfig = async (docsPath, gitToken) => {
-    await fs.writeFile(path.join(docsPath, CONFIG_FILE), JSON.stringify({gitToken}));
-    await fs.appendFile('.gitignore', `\r\n${_.last(docsPath.split('\\'))}/`);
+    await writeFile(path.join(docsPath, CONFIG_FILE), JSON.stringify({gitToken}));
+    await appendFile('.gitignore', `\r\n${_.last(docsPath.split('\\'))}/`);
 }
 
 const pull = async (docsPath, fetchOpts) => {
@@ -93,9 +88,9 @@ const cloneOrPull = async (docsUrl, docsPath, fetchOpts) => {
     }
 }
 
-const getDocsRepo = async (docsUrl, configGetter) => {
+const getDocsRepo = async (docsInfo, configGetter) => {
     let fetchOpts = {};
-    const docsPath = getDocsPath(docsUrl);
+    const { url: docsUrl, path: docsPath } = docsInfo;
 
     if (await isPrivateRepo(docsUrl)) {
         const gitToken = await getGitToken(docsPath);
@@ -129,8 +124,8 @@ const getLinksFromFile = content => {
     return _.flatten(linksSections);
 }
 
-const getLinkedPathsByDocPath = async (docsUrl, configGetter) => {
-    const docsRepo = await getDocsRepo(docsUrl, configGetter);
+const getLinkedPathsByDocPath = async (docsInfo, configGetter) => {
+    const docsRepo = await getDocsRepo(docsInfo, configGetter);
     const head = await docsRepo.getHeadCommit();
     const headTree = await head.getTree();
 
