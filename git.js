@@ -14,13 +14,14 @@ const getConfigGetter = async repo => {
     return value => config.getStringBuf(value);
 }
 
-// TODO: add ssh option
-const getFetchOptions = async (configGetter, gitToken) => {
+const getFetchOptions = async (configGetter, gitToken, isHttp) => {
     const userName = await configGetter('user.name');
 
     return {
         callbacks: {
-            credentials: (_url, _userName) => NodeGit.Cred.userpassPlaintextNew(userName, gitToken),
+            credentials: (_url, _userName) => isHttp 
+                ? NodeGit.Cred.userpassPlaintextNew(userName, gitToken) 
+                : cred.sshKeyFromAgent(userName),
             certificateCheck: () => 0
         }
     }
@@ -88,13 +89,13 @@ const cloneOrPull = async (docsUrl, docsPath, fetchOpts) => {
     }
 }
 
-const getDocsRepo = async (docsInfo, configGetter) => {
+const getDocsRepo = async (docsInfo, configGetter, isHttp) => {
     let fetchOpts = {};
     const { url: docsUrl, path: docsPath } = docsInfo;
 
     if (await isPrivateRepo(docsUrl)) {
         const gitToken = await getGitToken(docsPath);
-        fetchOpts = await getFetchOptions(configGetter, gitToken);
+        fetchOpts = await getFetchOptions(configGetter, gitToken, isHttp);
     }
     
     try {
@@ -124,8 +125,8 @@ const getLinksFromFile = content => {
     return _.flatten(linksSections);
 }
 
-const getLinkedPathsByDocPath = async (docsInfo, configGetter) => {
-    const docsRepo = await getDocsRepo(docsInfo, configGetter);
+const getLinkedPathsByDocPath = async (docsInfo, configGetter, isHttp) => {
+    const docsRepo = await getDocsRepo(docsInfo, configGetter, isHttp);
     const head = await docsRepo.getHeadCommit();
     const headTree = await head.getTree();
 

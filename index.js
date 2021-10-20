@@ -51,7 +51,7 @@ const getTouchedAsString = touched =>
         return acc.concat(description);
     }, '');
 
-const start = async () => {
+const start = async authType => {
     try {
         const repo = await openRepo(__dirname);
         const stagedFilesPaths = await getStagedFilesPaths(repo);
@@ -60,8 +60,9 @@ const start = async () => {
             const configGetter = await getConfigGetter(repo);
             const remoteOriginUrl = await configGetter('remote.origin.url');
             const docsInfo = getDocsInfo(remoteOriginUrl);
+            const isHttp = authType !== 'ssh';
             
-            const linkedPathsByDoc = await getLinkedPathsByDocPath(docsInfo, configGetter);
+            const linkedPathsByDoc = await getLinkedPathsByDocPath(docsInfo, configGetter, isHttp);
             const touched = getTouchedFilesByDoc(linkedPathsByDoc, stagedFilesPaths); 
     
             if (!_.isEmpty(touched)) {
@@ -93,4 +94,4 @@ const start = async () => {
     }
 }
 
-start();
+start(...process.argv.slice(2));
