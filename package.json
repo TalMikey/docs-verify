@@ -18,6 +18,7 @@
     "husky": "^7.0.0"
   },
   "dependencies": {
+    "axios": "^0.23.0",
     "lodash": "^4.17.21",
     "nodegit": "^0.27.0",
     "open": "^8.3.0",

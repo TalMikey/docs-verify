@@ -4,7 +4,7 @@ var _ = require('lodash');
 var open = require('open');
 var path = require('path');
 var fs = require('fs/promises');
-const { read } = require('fs');
+var axios = require('axios');
 
 const LINKS_REGEX = /\s?[Ll]inks\s?:\s?\n((- [a-zA-Z0-9\\\/\.]+\n?)+)/g;
 const SUCESS_CODE = 0;
@@ -128,18 +128,19 @@ const addConfig = async (docsPath, gitToken) => {
     await fs.appendFile('.gitignore', `\r\n${_.last(docsPath.split('\\'))}/`);
 }
 
-const getDocsRepo = async (remoteOriginUrl, configGetter) => {
-    let docsRepo = {};
+const isPrivateRepo = async path => {
+    const {status} = await axios.get(`${path}/info/refs?service=git-upload-pack`);
+ 
+    return status === 401;
+}
 
-    const docsUrl = getDocsUrl(remoteOriginUrl);
-    const docsPath = getDocsPath(docsUrl);
-    const gitToken = await getGitToken(docsPath);
-    const fetchOpts = await getFetchOptions(configGetter, gitToken);
-    
+const cloneOrFetch = async (docsUrl, docsPath, fetchOpts) => {
     try {
-        docsRepo = await NodeGit.Clone.clone(docsUrl, docsPath, {fetchOpts});
-        await addConfig(docsPath, gitToken);
+        const docsRepo = await NodeGit.Clone.clone(docsUrl, docsPath, {fetchOpts});
+        // await addConfig(docsPath, gitToken);
         console.log(`Cloned docs files to ${docsPath}`);
+
+        return docsRepo;
     }
     catch(err)
     {
@@ -147,30 +148,26 @@ const getDocsRepo = async (remoteOriginUrl, configGetter) => {
             throw err;
         }
         
-        docsRepo = await pull(docsPath, fetchOpts);
+        const docsRepo = await pull(docsPath, fetchOpts);
         console.log('Finished fetch docs files');
+
+        return docsRepo;
     }
+}
 
-    if (_.isNil(docsRepo)) {
-        throw 'Couldn\'t find repository'; 
+const getDocsRepo = async (remoteOriginUrl, configGetter) => {
+    let fetchOpts = {};
+
+    const docsUrl = getDocsUrl(remoteOriginUrl);
+    const docsPath = getDocsPath(docsUrl);
+
+    if (await isPrivateRepo(docsUrl)) {
+        const gitToken = await getGitToken(docsPath);
+        fetchOpts = await getFetchOptions(configGetter, gitToken);
     }
-
-    return docsRepo;
-} 
-
-const getLinkedPathsByDocPath = async (remoteOriginUrl, configGetter) => {
+    
     try {
-        const docsRepo = await getDocsRepo(remoteOriginUrl, configGetter);
-        const head = await docsRepo.getHeadCommit();
-        const headTree = await head.getTree();
-    
-        // TODO: add change type and if the files name changed
-        const linksByPath = await Promise.all(headTree.entries().filter(x => x.isBlob()).map(async x => ({
-            path: x.path(),
-            links: getLinksFromFile((await x.getBlob()).content().toString())
-        })));
-    
-        return linksByPath.filter(x => x.links.length);
+        return await cloneOrFetch(docsUrl, docsPath, fetchOpts); 
     }
     catch(err) {
         if (err.errno === NodeGit.Error.CODE.ERROR) {
@@ -181,6 +178,20 @@ const getLinkedPathsByDocPath = async (remoteOriginUrl, configGetter) => {
 
         throw err;
     }
+} 
+
+const getLinkedPathsByDocPath = async (remoteOriginUrl, configGetter) => {
+    const docsRepo = await getDocsRepo(remoteOriginUrl, configGetter);
+    const head = await docsRepo.getHeadCommit();
+    const headTree = await head.getTree();
+
+    // TODO: add change type and if the files name changed
+    const linksByPath = await Promise.all(headTree.entries().filter(x => x.isBlob()).map(async x => ({
+        path: x.path(),
+        links: getLinksFromFile((await x.getBlob()).content().toString())
+    })));
+
+    return linksByPath.filter(x => x.links.length);
 }
 
 const getUserApproval = () =>
