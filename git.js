@@ -4,6 +4,10 @@ var path = require('path');
 var axios = require('axios');
 var { readFile, writeFile, appendFile } = require('fs/promises');
 var { exitFail } = require('./process-control');
+var { readlineWrapper } = require('./readline-wrapper');
+var { fill } = require('git-credential-node');
+var { getCredentials } = require('./git-credentials');
+var execa = require('execa');
 
 const LINKS_REGEX = /\s?[Ll]inks\s?:\s?\n((- [a-zA-Z0-9\\\/\.]+\n?)+)/g;
 const CONFIG_FILE = 'docs.config.json';
@@ -21,38 +25,23 @@ const getFetchOptions = async (configGetter, gitToken, isHttp) => {
         callbacks: {
             credentials: (_url, _userName) => isHttp 
                 ? NodeGit.Cred.userpassPlaintextNew(userName, gitToken) 
-                : cred.sshKeyFromAgent(userName),
+                : NodeGit.Cred.sshKeyFromAgent(userName),
             certificateCheck: () => 0
         }
     }
 }
 
 const isPrivateRepo = async path => {
-    const {status} = await axios.get(`${path}/info/refs?service=git-upload-pack`);
- 
-    return status === 401;
-}
-
-const getGitToken = async docsPath => {
     try {
-        const configFile = await readFile(path.join(docsPath, CONFIG_FILE));
-        const config = JSON.parse(configFile);
+        const {status} = await axios.get(`${path}/info/refs?service=git-upload-pack`);
 
-        return config.gitToken;
-    }
-    catch (err) {
-        if (err.code === 'ENOENT') {
-            reader.stdoutMuted = true;
-            
-            return await readlineWrapper('please enter git token: ', (answer, resolve) => resolve(answer));
-        }
-
-        throw err;
+        return status === 401;
+    } catch (err){
+        return err.response.status === 401;
     }
 }
 
-const addConfig = async (docsPath, gitToken) => {
-    await writeFile(path.join(docsPath, CONFIG_FILE), JSON.stringify({gitToken}));
+const addConfig = async docsPath => {
     await appendFile('.gitignore', `\r\n${_.last(docsPath.split('\\'))}/`);
 }
 
@@ -71,7 +60,7 @@ const pull = async (docsPath, fetchOpts) => {
 const cloneOrPull = async (docsUrl, docsPath, fetchOpts) => {
     try {
         const docsRepo = await NodeGit.Clone.clone(docsUrl, docsPath, {fetchOpts});
-        // await addConfig(docsPath, gitToken);
+        await addConfig(docsPath);
         console.log(`Cloned docs files to ${docsPath}`);
 
         return docsRepo;
@@ -94,7 +83,7 @@ const getDocsRepo = async (docsInfo, configGetter, isHttp) => {
     const { url: docsUrl, path: docsPath } = docsInfo;
 
     if (await isPrivateRepo(docsUrl)) {
-        const gitToken = await getGitToken(docsPath);
+        const gitToken = await getCredentials(docsUrl);
         fetchOpts = await getFetchOptions(configGetter, gitToken, isHttp);
     }
     
