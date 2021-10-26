@@ -1,14 +1,19 @@
 {
   "name": "docs-verify",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "verify docs code changes and make it up to date",
-  "bin": "./lib",
+  "scripts": {
+    "build": "npx babel lib --out-dir dist",
+    "prepublish": "npm run build"
+  },
+  "bin": "./dist/index.js",
   "author": "Tal Mikey",
   "license": "ISC",
   "devDependencies": {
     "@babel/cli": "^7.15.7",
     "@babel/core": "^7.15.5",
     "@babel/node": "^7.15.4",
+    "@babel/plugin-transform-runtime": "^7.15.8",
     "@babel/preset-env": "^7.15.6"
   },
   "dependencies": {
