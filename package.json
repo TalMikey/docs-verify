@@ -1,27 +1,20 @@
 {
-  "name": "markdown-docs-verify",
+  "name": "docs-verify",
   "version": "1.0.0",
   "description": "verify docs code changes and make it up to date",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "prepare": "husky install"
-  },
+  "bin": "./lib",
   "author": "Tal Mikey",
   "license": "ISC",
   "devDependencies": {
     "@babel/cli": "^7.15.7",
     "@babel/core": "^7.15.5",
     "@babel/node": "^7.15.4",
-    "@babel/preset-env": "^7.15.6",
-    "husky": "^7.0.0"
+    "@babel/preset-env": "^7.15.6"
   },
   "dependencies": {
     "axios": "^0.23.0",
     "lodash": "^4.17.21",
     "nodegit": "^0.27.0",
-    "open": "^8.3.0",
-    "shelljs": "^0.8.4"
+    "open": "^8.3.0"
   }
 }
