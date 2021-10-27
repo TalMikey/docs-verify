@@ -1,6 +1,6 @@
 {
   "name": "docs-verify",
-  "version": "1.0.8",
+  "version": "1.0.11",
   "description": "verify docs code changes and make it up to date",
   "scripts": {
     "build": "npx babel lib --out-dir dist",
