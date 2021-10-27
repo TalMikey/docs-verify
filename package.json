@@ -1,12 +1,13 @@
 {
   "name": "docs-verify",
-  "version": "1.0.11",
-  "description": "verify docs code changes and make it up to date",
+  "version": "1.0.15",
+  "description": "Make documentation meaningful!",
   "scripts": {
     "build": "npx babel lib --out-dir dist",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "start": "babel-node --presets @babel/env lib/index.js"
   },
-  "bin": "./dist/index.js",
+  "bin": "./bin/index.js",
   "author": "Tal Mikey",
   "license": "ISC",
   "devDependencies": {
