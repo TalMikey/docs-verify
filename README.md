@@ -37,7 +37,7 @@ Remove `"postinstall": "husky install"` and `"docs-verify": "docs-verify"` from 
 
 `yarn remove husky && git config --unset core.hooksPath`
 
-## Compatibily
+## Compatibility
 - Github
 - Azure DevOps 
 
