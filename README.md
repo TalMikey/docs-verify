@@ -37,6 +37,10 @@ Remove `"postinstall": "husky install"` and `"docs-verify": "docs-verify"` from 
 
 `yarn remove husky && git config --unset core.hooksPath`
 
+## Compatibily
+- Github
+- Azure DevOps 
+
 ## Usage
 The default clone method is `https`. To use ssh, add `ssh` to `docs-verify` script in your `package.json`.
 
